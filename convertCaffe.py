@@ -5,7 +5,7 @@ import onnx
 import numpy as np
 from caffe.proto import caffe_pb2
 caffe.set_mode_cpu()
-from onnx2caffe._transformers import ConvAddFuser,ConstantsToInitializers
+from onnx2caffe._transformers import *
 from onnx2caffe._graph import Graph
 
 import onnx2caffe._operators as cvt
@@ -16,8 +16,10 @@ from onnx import shape_inference
 import importlib
 
 transformers = [
+    TransposeKiller(),
     ConstantsToInitializers(),
     ConvAddFuser(),
+    MatmulAddFuser(),
 ]
 
 def convertToCaffe(graph, prototxt_save_path, caffe_model_save_path):
@@ -35,6 +37,7 @@ def convertToCaffe(graph, prototxt_save_path, caffe_model_save_path):
 
 
     for id, node in enumerate(graph.nodes):
+        print(node.name, node.op_type)
         node_name = node.name
         op_type = node.op_type
         inputs = node.inputs
@@ -101,9 +104,9 @@ def getGraph(onnx_path):
     return graph
 
 if __name__ == "__main__":
-    onnx_path = sys.argv[1]
-    prototxt_path = sys.argv[2]
-    caffemodel_path = sys.argv[3]
+    onnx_path = "model/quality_v203.onnx" #sys.argv[1]
+    prototxt_path = "quality_v203.prototxt" #sys.argv[2]
+    caffemodel_path = "quality_v203.caffemodel" #sys.argv[3]
     graph = getGraph(onnx_path)
     convertToCaffe(graph, prototxt_path, caffemodel_path)
 

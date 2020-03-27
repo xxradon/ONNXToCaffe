@@ -50,6 +50,15 @@ def _convert_BatchNorm(net, node, graph, err):
     # net.params[node_name][0].data = scale
     # net.params[node_name][1].data = bias
 
+def _convert_leaky_relu(net, node, graph, err):
+    pass
+
+def _convert_reduce_mean(net, node, graph, err):
+    pass
+
+def _convert_permute(net, node, graph, err):
+    pass
+
 def _convert_Add(net, node, graph, err):
     pass
 
@@ -67,6 +76,26 @@ def _convert_pool(net, node, graph, err):
 
 def _convert_dropout(net, node, graph, err):
     pass
+
+def _convert_matmul(net, node, graph, err):
+    node_name = node.name
+    weight_name = node.inputs[1]
+    if weight_name in node.input_tensors:
+        W = node.input_tensors[weight_name]
+    else:
+        err.missing_initializer(node,
+                                "Weight tensor: {} not found in the graph initializer".format(weight_name, ))
+
+    b = None
+    if len(node.inputs) > 2:
+        b = node.input_tensors[node.inputs[2]]
+    if len(W.shape) != 2 or (b is not None and len(b.shape) != 1):
+        return err.unsupported_op_configuration(node, "Gemm is supported only for inner_product layer")
+    if b is not None:
+        if W.shape[0] != b.shape[0]:
+            return err.unsupported_op_configuration(node, "Gemm is supported only for inner_product layer")
+    net.params[node_name][0].data[...] = W
+    net.params[node_name][1].data[...] = b  
 
 def _convert_gemm(net, node, graph, err):
     node_name = node.name
@@ -127,6 +156,10 @@ def _convert_conv_transpose(net, node, graph, err):
 _ONNX_NODE_REGISTRY = {
     "Conv": _convert_conv,
     "Relu": _convert_relu,
+    "LeakyRelu": _convert_leaky_relu,
+    "Transpose": _convert_permute,
+    "ReduceMean": _convert_reduce_mean,
+    "MatMul": _convert_matmul,
     "BatchNormalization": _convert_BatchNorm,
     "Add": _convert_Add,
     "Mul": _convert_Mul,

@@ -121,22 +121,22 @@ def _convert_Add(node,graph,err):
     output_name = str(node.outputs[0])
     node_name = node.name
 
-    max_dim = 0
-    for name in input_name_list:
-        if graph.channel_dims[name]>max_dim:
-            max_dim = graph.channel_dims[name]
+    # max_dim = 0
+    # for name in input_name_list:
+    #     if graph.channel_dims[name]>max_dim:
+    #         max_dim = graph.channel_dims[name]
 
-    if 'broadcast' in node.attrs:
-        if node.attrs['broadcast'] == 1:
-            input_node_number = len(input_name_list)
-            if input_node_number !=2:
-                return err.unsupported_op_configuration(node, "Broadcast Add must has 2 input, not {}".format(input_node_number))
-            axis = node.attrs['axis']
-            flat_layer = myf("Flatten",node_name+'_flat',[input_name_list[1]],[output_name+'_flat'])
-            layer = myf("Bias", node_name, [input_name_list[0],output_name+'_flat'], [output_name], axis = axis)
-            # layer = myf("Bias", node_name, input_name_list, [output_name], bias_term = False, axis = axis)
-            graph.channel_dims[output_name] = graph.channel_dims[input_name_list[0]]
-            return flat_layer,layer
+    # if 'broadcast' in node.attrs:
+    #     if node.attrs['broadcast'] == 1:
+    #         input_node_number = len(input_name_list)
+    #         if input_node_number !=2:
+    #             return err.unsupported_op_configuration(node, "Broadcast Add must has 2 input, not {}".format(input_node_number))
+    #         axis = node.attrs['axis']
+    #         flat_layer = myf("Flatten",node_name+'_flat',[input_name_list[1]],[output_name+'_flat'])
+    #         layer = myf("Bias", node_name, [input_name_list[0],output_name+'_flat'], [output_name], axis = axis)
+    #         # layer = myf("Bias", node_name, input_name_list, [output_name], bias_term = False, axis = axis)
+    #         graph.channel_dims[output_name] = graph.channel_dims[input_name_list[0]]
+    #         return flat_layer,layer
 
     layer = myf("Eltwise",node_name,input_name_list,[output_name],operation=P.Eltwise.SUM)
     graph.channel_dims[output_name] = graph.channel_dims[input_name_list[0]]
@@ -152,18 +152,18 @@ def _convert_Mul(node,graph,err):
     #     if graph.channel_dims[name]>max_dim:
     #         max_dim = graph.channel_dims[name]
 
-    if 'broadcast' in node.attrs:
-        if node.attrs['broadcast'] == 1:
-            input_node_number = len(input_name_list)
-            if input_node_number !=2:
-                return err.unsupported_op_configuration(node, "Broadcast Mul must has 2 input, not {}".format(input_node_number))
-            axis = node.attrs['axis']
-            flat_layer = myf("Flatten",node_name+'_flat',[input_name_list[1]],[output_name+'_flat'])
-            layer = myf("Scale", node_name, [input_name_list[0],output_name+'_flat'], [output_name], bias_term = False, axis = axis)
-            graph.channel_dims[output_name] = graph.channel_dims[input_name_list[0]]
-            return flat_layer,layer
+    # if 'broadcast' in node.attrs:
+    #     if node.attrs['broadcast'] == 1:
+    #         input_node_number = len(input_name_list)
+    #         if input_node_number !=2:
+    #             return err.unsupported_op_configuration(node, "Broadcast Mul must has 2 input, not {}".format(input_node_number))
+    #         axis = node.attrs['axis']
+    #         flat_layer = myf("Flatten",node_name+'_flat',[input_name_list[1]],[output_name+'_flat'])
+    #         layer = myf("Scale", node_name, [input_name_list[0],output_name+'_flat'], [output_name], bias_term = False, axis = axis)
+    #         graph.channel_dims[output_name] = graph.channel_dims[input_name_list[0]]
+    #         return flat_layer,layer
 
-    layer = myf("Eltwise",node_name,input_name_list,[output_name],operation=P.Eltwise.PROD)
+    layer = myf("Scale",node_name,input_name_list,[output_name],axis=0,num_axes=2)
     graph.channel_dims[output_name] = graph.channel_dims[input_name_list[0]]
     return layer
 
@@ -379,11 +379,79 @@ def _convert_conv_transpose(node,graph,err):
     #         group=groups,
     #         bias_term=bias_term))
 
+def _convert_leaky_relu(node,graph,err):
+    input_name = str(node.inputs[0])
+    output_name = str(node.outputs[0])
+    name = str(node.name)
+    alpha = node.attrs.get("alpha", 1)
 
+    print(node.attrs["alpha"])
+
+    if input_name==output_name:
+        inplace = True
+    else:
+        inplace = False
+
+    layer = myf("ReLU",name,[input_name],[output_name],in_place=inplace, negative_slope=alpha)
+    # l_top_relu1 = L.ReLU(l_bottom, name=name, in_place=True)
+
+    graph.channel_dims[output_name] = graph.channel_dims[input_name]
+
+    return layer
+
+def _convert_permute(node,graph,err):
+    node_name = node.name
+    input_name = str(node.inputs[0])
+    output_name = str(node.outputs[0])
+    perm = node.attrs["perm"]
+
+    if input_name==output_name:
+        inplace = True
+    else:
+        inplace = False
+    
+    layer = myf("Permute", node_name, [input_name], [output_name], in_place=inplace, permute_param=dict(order=list(perm)))
+
+    return layer
+
+def _convert_reduce_mean(node,graph,err):
+    node_name = node.name
+    input_name = str(node.inputs[0])
+    output_name = str(node.outputs[0])
+    axes = node.attrs['axes']
+    keep_dim = node.attrs.get("keepdims", 0)
+
+    layer = myf("Reduction", node_name, [input_name], [output_name], axis=len(axes))
+    graph.channel_dims[output_name] = graph.channel_dims[input_name]
+    return layer
+
+def _convert_matmul(node,graph,err):
+    node_name = node.name
+    input_name = str(node.inputs[0])
+    output_name = str(node.outputs[0])
+
+    weight_name = node.inputs[1]
+    W = node.input_tensors[weight_name]
+
+    bias_flag = False
+    bias = None
+    if len(node.inputs) > 2:
+        bias = node.input_tensors[node.inputs[2]]
+        bias_flag = True
+
+    W = np.transpose(W, (1, 0)) 
+    node.input_tensors[weight_name] = W
+    layer = myf("InnerProduct", node_name, [input_name], [output_name], num_output=W.shape[0], bias_term=bias_flag)
+    graph.channel_dims[output_name] = W.shape[0]
+    return layer
 
 _ONNX_NODE_REGISTRY = {
     "Conv": _convert_conv,
     "Relu": _convert_relu,
+    "LeakyRelu": _convert_leaky_relu,
+    "Transpose": _convert_permute,
+    "ReduceMean": _convert_reduce_mean,
+    "MatMul": _convert_matmul,
     "BatchNormalization": _convert_BatchNorm,
     "Add": _convert_Add,
     "Mul": _convert_Mul,

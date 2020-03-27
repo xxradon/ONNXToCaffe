@@ -10,6 +10,91 @@ from onnx import TensorProto
 
 from ._graph import Graph, Node
 
+class TransposeKiller(object):
+    '''
+    kill pair transpose patten: 0 2 3 1 -> 0 3 1 2
+    '''
+    def __init__(self):
+        super(TransposeKiller, self).__init__()
+
+    def __call__(self, graph):
+        nodes = graph.nodes
+        for node in nodes:
+            n = node
+            nodes_window = []
+            for _ in range(3):
+                if len(n.parents) == 0:
+                    break
+                else:
+                    nodes_window.insert(0, n)
+                n = n.parents[0]
+
+            if len(nodes_window) != 3:
+                continue
+
+            if not self.is_eligible(graph, nodes_window):
+                continue
+
+            killed = self.kill(graph, nodes_window)
+            # for node in nodes_window:
+            nodes.remove(killed[0])
+            nodes.remove(killed[2])
+            # nodes.append(killed[1])            
+        return Graph(nodes, graph.inputs, graph.outputs, graph.shape_dict)                
+
+
+    def is_eligible(self, graph, nodes):
+        first, mid, last = nodes[0], nodes[1], nodes[2]
+        #print("[kill trans] ", first.name, mid.name, last.name)
+        if first.op_type != 'Transpose':
+            return False
+        if last.op_type != 'Transpose':
+            return False
+        if first.attrs['perm'] != list([0,2,3,1]):
+            return False
+        if last.attrs['perm'] != list([0,3,1,2]):
+            return False
+        return True
+
+    def kill(self, graph, nodes):
+        first, mid, last = nodes[0], nodes[1], nodes[2]
+        for parent in first.parents:
+            parent.children.remove(first)
+            # parent.add_child(mid)
+            for child in first.children:
+                parent.add_child(child)
+                child.parents.remove(first)
+                # child.inputs.remove(first.outputs[0])
+                # child.inputs.append(first.inputs[0])
+                child.inputs = [first.inputs[0] if x == first.outputs[0] else x for x in child.inputs]
+        for child in last.children:
+            child.parents.remove(last)
+            # child.inputs = last.inputs
+            # child.add_parent(mid)
+            # child.inputs.remove(last.outputs[0])
+            # child.inputs.append(mid.outputs[0])
+            child.inputs = [mid.outputs[0] if x == last.outputs[0] else x for x in child.inputs]
+            for parent in last.parents:
+                child.add_parent(parent)
+                parent.children.remove(last)
+                # parent.outputs = child.outputs
+
+        for parent in mid.parents:
+            if parent.op_type == "Reshape":
+                param_name = parent.inputs[1]
+                reshape_param = parent.input_tensors[param_name]
+                if (mid.op_type == "Mul"):
+                    parent.input_tensors[param_name] = np.array([reshape_param[0], reshape_param[3]])
+                else:
+                    parent.input_tensors[param_name] = np.array([reshape_param[0], reshape_param[3], reshape_param[1], reshape_param[2]])
+
+        # mid.parents.remove(first)
+        # mid.children.remove(last)
+        # mid.inputs = first.inputs
+        # mid.outputs = last.outputs
+        print(first.name, mid.name, last.name)
+        return [first, mid, last]
+        
 
 class NodesFuser(object):
     '''
@@ -139,6 +224,48 @@ class ConvAddFuser(NodesFuser):
         child.parents.remove(parent)
         return [parent]
 
+class MatmulAddFuser(NodesFuser):
+    '''
+    Fuses Add layer into parent MatMul layer.
+    '''
+    def __init__(self):  # type: () -> None
+        super(MatmulAddFuser, self).__init__(2)
+
+    def is_eligible(self, graph, nodes):  # type: (Graph, Sequence[Node]) -> bool
+        parent, child = nodes[0], nodes[1]
+        # print(parent.op_type, child.op_type)
+        if parent.op_type != 'MatMul':
+            return False
+        if child.op_type != 'Add':
+            return False
+        if parent.inputs[1] not in parent.input_tensors:
+            return False
+        if len(parent.inputs) > 2 and parent.inputs[2] not in parent.input_tensors:
+            return False
+        if child.inputs[1] not in child.input_tensors:
+            return False
+
+        return True
+
+    def merge(self, graph, nodes):  # type: (Graph, Sequence[Node]) -> Sequence[Node]
+        parent, child = nodes[0], nodes[1]
+        output_channels = parent.input_tensors[parent.inputs[1]].shape[1]
+        if len(parent.inputs) > 2:
+            bias_input_name = parent.inputs[2]
+            bias = parent.input_tensors[bias_input_name]
+        else:
+            bias_input_name = "{}_bias".format(parent.name,)
+            parent.inputs.append(bias_input_name)
+            bias = np.zeros(
+                (output_channels,), dtype=np.float32
+            )
+            parent.input_tensors[bias_input_name] = bias
+        bias = bias + child.input_tensors[child.inputs[1]]
+        parent.input_tensors[bias_input_name] = bias
+        parent.outputs = child.outputs
+        parent.children.remove(child)
+        child.parents.remove(parent)
+        return [parent]
 
 class BNBroadcastedMulFuser(NodesFuser):
     '''
