@@ -104,9 +104,9 @@ def getGraph(onnx_path):
     return graph
 
 if __name__ == "__main__":
-    onnx_path = "model/quality_v203.onnx" #sys.argv[1]
-    prototxt_path = "quality_v203.prototxt" #sys.argv[2]
-    caffemodel_path = "quality_v203.caffemodel" #sys.argv[3]
+    onnx_path = sys.argv[1]
+    prototxt_path = sys.argv[2]
+    caffemodel_path = sys.argv[3]
     graph = getGraph(onnx_path)
     convertToCaffe(graph, prototxt_path, caffemodel_path)
 

@@ -121,22 +121,22 @@ def _convert_Add(node,graph,err):
     output_name = str(node.outputs[0])
     node_name = node.name
 
-    # max_dim = 0
-    # for name in input_name_list:
-    #     if graph.channel_dims[name]>max_dim:
-    #         max_dim = graph.channel_dims[name]
+    max_dim = 0
+    for name in input_name_list:
+        if graph.channel_dims[name]>max_dim:
+            max_dim = graph.channel_dims[name]
 
-    # if 'broadcast' in node.attrs:
-    #     if node.attrs['broadcast'] == 1:
-    #         input_node_number = len(input_name_list)
-    #         if input_node_number !=2:
-    #             return err.unsupported_op_configuration(node, "Broadcast Add must has 2 input, not {}".format(input_node_number))
-    #         axis = node.attrs['axis']
-    #         flat_layer = myf("Flatten",node_name+'_flat',[input_name_list[1]],[output_name+'_flat'])
-    #         layer = myf("Bias", node_name, [input_name_list[0],output_name+'_flat'], [output_name], axis = axis)
-    #         # layer = myf("Bias", node_name, input_name_list, [output_name], bias_term = False, axis = axis)
-    #         graph.channel_dims[output_name] = graph.channel_dims[input_name_list[0]]
-    #         return flat_layer,layer
+    if 'broadcast' in node.attrs:
+        if node.attrs['broadcast'] == 1:
+            input_node_number = len(input_name_list)
+            if input_node_number !=2:
+                return err.unsupported_op_configuration(node, "Broadcast Add must has 2 input, not {}".format(input_node_number))
+            axis = node.attrs['axis']
+            flat_layer = myf("Flatten",node_name+'_flat',[input_name_list[1]],[output_name+'_flat'])
+            layer = myf("Bias", node_name, [input_name_list[0],output_name+'_flat'], [output_name], axis = axis)
+            # layer = myf("Bias", node_name, input_name_list, [output_name], bias_term = False, axis = axis)
+            graph.channel_dims[output_name] = graph.channel_dims[input_name_list[0]]
+            return flat_layer,layer
 
     layer = myf("Eltwise",node_name,input_name_list,[output_name],operation=P.Eltwise.SUM)
     graph.channel_dims[output_name] = graph.channel_dims[input_name_list[0]]
@@ -147,21 +147,21 @@ def _convert_Mul(node,graph,err):
     output_name = str(node.outputs[0])
     node_name = node.name
 
-    # max_dim = 0
-    # for name in input_name_list:
-    #     if graph.channel_dims[name]>max_dim:
-    #         max_dim = graph.channel_dims[name]
+    max_dim = 0
+    for name in input_name_list:
+        if graph.channel_dims[name]>max_dim:
+            max_dim = graph.channel_dims[name]
 
-    # if 'broadcast' in node.attrs:
-    #     if node.attrs['broadcast'] == 1:
-    #         input_node_number = len(input_name_list)
-    #         if input_node_number !=2:
-    #             return err.unsupported_op_configuration(node, "Broadcast Mul must has 2 input, not {}".format(input_node_number))
-    #         axis = node.attrs['axis']
-    #         flat_layer = myf("Flatten",node_name+'_flat',[input_name_list[1]],[output_name+'_flat'])
-    #         layer = myf("Scale", node_name, [input_name_list[0],output_name+'_flat'], [output_name], bias_term = False, axis = axis)
-    #         graph.channel_dims[output_name] = graph.channel_dims[input_name_list[0]]
-    #         return flat_layer,layer
+    if 'broadcast' in node.attrs:
+        if node.attrs['broadcast'] == 1:
+            input_node_number = len(input_name_list)
+            if input_node_number !=2:
+                return err.unsupported_op_configuration(node, "Broadcast Mul must has 2 input, not {}".format(input_node_number))
+            axis = node.attrs['axis']
+            flat_layer = myf("Flatten",node_name+'_flat',[input_name_list[1]],[output_name+'_flat'])
+            layer = myf("Scale", node_name, [input_name_list[0],output_name+'_flat'], [output_name], bias_term = False, axis = axis)
+            graph.channel_dims[output_name] = graph.channel_dims[input_name_list[0]]
+            return flat_layer,layer
 
     layer = myf("Scale",node_name,input_name_list,[output_name],axis=0,num_axes=2)
     graph.channel_dims[output_name] = graph.channel_dims[input_name_list[0]]
