@@ -105,8 +105,12 @@ def _convert_gemm(net, node, graph, err):
     else:
         err.missing_initializer(node,
                                 "Weight tensor: {} not found in the graph initializer".format(weight_name, ))
-    if node.attrs["broadcast"] != 1 or node.attrs["transB"] != 1:
-        return err.unsupported_op_configuration(node, "Gemm is supported only for inner_product layer")
+
+    broad_cast = node.attrs.get("broadcast", 1)
+    trans_b = node.attrs.get("transB", 1)
+    if broad_cast != 1 or trans_b != 1:
+        return err.unsupported_op_configuration(node,"Gemm is supported only for inner_product layer")
+
     b = None
     if len(node.inputs) > 2:
         b = node.input_tensors[node.inputs[2]]
