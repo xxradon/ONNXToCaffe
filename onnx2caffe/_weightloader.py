@@ -77,6 +77,19 @@ def _convert_pool(net, node, graph, err):
 def _convert_dropout(net, node, graph, err):
     pass
 
+def _convert_prelu(net, node, graph, err):
+    node_name = node.name
+    weight_name = node.inputs[1]
+    if weight_name in node.input_tensors:
+        W = node.input_tensors[weight_name]
+    else:
+        err.missing_initializer(node,
+                                "Weight tensor: {} not found in the graph initializer".format(weight_name, ))
+
+    # net.params[node_name][0].data[...] = W
+    np.copyto(net.params[node_name][0].data, W.flatten(), casting='same_kind')
+
+
 def _convert_matmul(net, node, graph, err):
     node_name = node.name
     weight_name = node.inputs[1]
@@ -161,6 +174,7 @@ _ONNX_NODE_REGISTRY = {
     "Conv": _convert_conv,
     "Relu": _convert_relu,
     "LeakyRelu": _convert_leaky_relu,
+    "PRelu": _convert_prelu,
     "Transpose": _convert_permute,
     "ReduceMean": _convert_reduce_mean,
     "MatMul": _convert_matmul,

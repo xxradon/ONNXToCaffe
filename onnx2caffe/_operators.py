@@ -76,6 +76,23 @@ def _convert_relu(node,graph,err):
 
     return layer
 
+def _convert_prelu(node,graph,err):
+    input_name = str(node.inputs[0])
+    output_name = str(node.outputs[0])
+    name = str(node.name)
+
+    if input_name==output_name:
+        inplace = True
+    else:
+        inplace = False
+
+    layer = myf("PReLU",name,[input_name],[output_name],in_place=inplace)
+    # l_top_relu1 = L.ReLU(l_bottom, name=name, in_place=True)
+
+    graph.channel_dims[output_name] = graph.channel_dims[input_name]
+
+    return layer
+
 def _convert_sigmoid(node,graph,err):
     input_name = str(node.inputs[0])
     output_name = str(node.outputs[0])
@@ -451,6 +468,7 @@ _ONNX_NODE_REGISTRY = {
     "Conv": _convert_conv,
     "Relu": _convert_relu,
     "LeakyRelu": _convert_leaky_relu,
+    "PRelu": _convert_prelu,
     "Transpose": _convert_permute,
     "ReduceMean": _convert_reduce_mean,
     "MatMul": _convert_matmul,
