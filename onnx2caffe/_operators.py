@@ -180,7 +180,11 @@ def _convert_Mul(node,graph,err):
             graph.channel_dims[output_name] = graph.channel_dims[input_name_list[0]]
             return flat_layer,layer
 
-    layer = myf("Scale",node_name,input_name_list,[output_name],axis=0,num_axes=2)
+    if input_name_list[0] == input_name_list[1]:
+        layer = myf("Eltwise",node_name,input_name_list,[output_name],operation=P.Eltwise.PROD)
+    else:    
+        layer = myf("Scale",node_name,input_name_list,[output_name],axis=0,num_axes=2)
+
     graph.channel_dims[output_name] = graph.channel_dims[input_name_list[0]]
     return layer
 
@@ -464,6 +468,43 @@ def _convert_matmul(node,graph,err):
     graph.channel_dims[output_name] = W.shape[0]
     return layer
 
+def _convert_sqrt(node,graph,err):
+    input_name = str(node.inputs[0])
+    output_name = str(node.outputs[0])
+    name = str(node.name)
+
+    if input_name==output_name:
+        inplace = True
+    else:
+        inplace = False
+
+    layer = myf("Power",name,[input_name],[output_name],in_place=inplace, power=0.5)
+    # l_top_relu1 = L.ReLU(l_bottom, name=name, in_place=True)
+
+    graph.channel_dims[output_name] = graph.channel_dims[input_name]
+
+    return layer
+
+def _convert_softmax(node,graph,err):
+    input_name = str(node.inputs[0])
+    output_name = str(node.outputs[0])
+    name = str(node.name)
+
+    axis_ = node.attrs.get("axis", 1)
+    print("softmax axis ", axis_)
+
+    if input_name==output_name:
+        inplace = True
+    else:
+        inplace = False
+
+    layer = myf("Softmax",name,[input_name],[output_name],in_place=inplace, axis=axis_)
+    # l_top_relu1 = L.ReLU(l_bottom, name=name, in_place=True)
+
+    graph.channel_dims[output_name] = graph.channel_dims[input_name]
+
+    return layer
+
 _ONNX_NODE_REGISTRY = {
     "Conv": _convert_conv,
     "Relu": _convert_relu,
@@ -485,4 +526,6 @@ _ONNX_NODE_REGISTRY = {
     "ConvTranspose": _convert_conv_transpose,
     "Sigmoid": _convert_sigmoid,
     "Flatten": _convert_Flatten,
+    "Sqrt": _convert_sqrt,
+    "Softmax": _convert_softmax
 }
