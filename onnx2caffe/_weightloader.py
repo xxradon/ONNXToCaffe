@@ -77,6 +77,12 @@ def _convert_pool(net, node, graph, err):
 def _convert_dropout(net, node, graph, err):
     pass
 
+def _convert_sqrt(net, node, graph, err):
+    pass
+
+def _convert_softmax(net, node, graph, err):
+    pass
+
 def _convert_prelu(net, node, graph, err):
     node_name = node.name
     weight_name = node.inputs[1]
@@ -191,6 +197,8 @@ _ONNX_NODE_REGISTRY = {
     "ConvTranspose": _convert_conv_transpose,
     "Sigmoid": _convert_sigmoid,
     "Flatten": _convert_Flatten,
+    "Sqrt": _convert_sqrt,
+    "Softmax": _convert_softmax
 }
 
 

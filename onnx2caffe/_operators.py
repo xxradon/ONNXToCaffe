@@ -50,14 +50,31 @@ def _convert_conv(node, graph, err):
     pads = node.attrs.get("pads", [0, 0, 0, 0])
     strides = node.attrs["strides"]
 
-    layer = myf("Convolution", node_name, [input_name], [output_name],
-                kernel_h = kernel_shape[0],kernel_w = kernel_shape[1],
-                stride_h=strides[0], stride_w = strides[1], group = groups,
-                pad_h = pads[0], pad_w = pads[1],
-                num_output=W.shape[0],  dilation = dilations[0], bias_term = bias_flag)
-
     graph.channel_dims[output_name] = W.shape[0]
-    return layer
+
+    if pads[0] == pads[2] and pads[1] == pads[3]:
+        layer = myf("Convolution", node_name, [input_name], [output_name],
+                    kernel_h = kernel_shape[0],kernel_w = kernel_shape[1],
+                    stride_h=strides[0], stride_w = strides[1], group = groups,
+                    pad_h = pads[0], pad_w = pads[1],
+                    num_output=W.shape[0],  dilation = dilations[0], bias_term = bias_flag)
+        return layer
+    else:
+        # add slice_w and slice_h
+        slice_pad_w = pads[2] * strides[0]
+        slice_pad_h = pads[3] * strides[1]
+        layer = myf("Convolution", node_name, [input_name], [output_name + "_temp"],
+            kernel_h = kernel_shape[0],kernel_w = kernel_shape[1],
+            stride_h=strides[0], stride_w = strides[1], group = groups,
+            pad_h = slice_pad_h, pad_w = slice_pad_w,
+            num_output=W.shape[0],  dilation = dilations[0], bias_term = bias_flag)
+
+        slice_h_layer = myf("Slice", node_name + "_slice_h", 
+                    [output_name + "_temp"], [node_name + "_slice_h", output_name + "_slice_h"], axis = 2, slice_point=[1])
+        slice_w_layer = myf("Slice", node_name + "_slice_w",
+                    [output_name + "_slice_h"], [node_name + "_slice_w", output_name], axis = 3, slice_point=[1])
+
+        return layer, slice_h_layer, slice_w_layer
 
 def _convert_relu(node,graph,err):
     input_name = str(node.inputs[0])
