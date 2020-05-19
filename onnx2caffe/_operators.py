@@ -8,6 +8,9 @@ import numpy as np
 from ._graph import Node, Graph
 from MyCaffe import Function as myf
 
+# slice cnt, reduce the length of slice layer name str
+slice_cnt = 0
+
 def _compare(a, b, encoding="utf8"): #type: (Text, Text, Text) -> bool
     if isinstance(a, bytes):
         a = a.decode(encoding)
@@ -60,7 +63,8 @@ def _convert_conv(node, graph, err):
                     num_output=W.shape[0],  dilation = dilations[0], bias_term = bias_flag)
         return layer
     else:
-        # add slice_w and slice_h
+        global slice_cnt
+        # add sw and sh
         slice_pad_w = pads[2] * strides[0]
         slice_pad_h = pads[3] * strides[1]
         layer = myf("Convolution", node_name, [input_name], [output_name + "_temp"],
@@ -69,12 +73,17 @@ def _convert_conv(node, graph, err):
             pad_h = slice_pad_h, pad_w = slice_pad_w,
             num_output=W.shape[0],  dilation = dilations[0], bias_term = bias_flag)
 
-        slice_h_layer = myf("Slice", node_name + "_slice_h", 
-                    [output_name + "_temp"], [node_name + "_slice_h", output_name + "_slice_h"], axis = 2, slice_point=[1])
-        slice_w_layer = myf("Slice", node_name + "_slice_w",
-                    [output_name + "_slice_h"], [node_name + "_slice_w", output_name], axis = 3, slice_point=[1])
+        slice_h_names = [str(slice_cnt) + "_slice_h0", str(slice_cnt) + "_slice_h1"]
+        slice_w_names = [str(slice_cnt) + "_slice_w0", output_name]
 
-        return layer, slice_h_layer, slice_w_layer
+        sh_layer = myf("Slice", node_name + "_sh", 
+                    [output_name + "_temp"], slice_h_names, axis = 2, slice_point=[1])
+        sw_layer = myf("Slice", node_name + "_sw",
+                    [slice_h_names[1]], slice_w_names, axis = 3, slice_point=[1])
+
+        # update slice cnt
+        slice_cnt = slice_cnt + 1
+        return layer, sh_layer, sw_layer
 
 def _convert_relu(node,graph,err):
     input_name = str(node.inputs[0])
@@ -225,8 +234,11 @@ def _convert_Reshape(node,graph,err):
         graph.channel_dims[output_name] = shape[1]
         return layer
     elif len(shape) == 4:
+        shape_l = list(shape)
+        # hard code, reshpae only C/H/W, not N
+        shape_l[0] = 0
         graph.channel_dims[output_name] = shape[1]
-        layer = myf("Reshape", node_name, [input_name], [output_name], reshape_param = dict(shape=dict(dim=list(shape))))
+        layer = myf("Reshape", node_name, [input_name], [output_name], reshape_param = dict(shape=dict(dim=shape_l)))
         return layer
     else:
         return err.unsupported_op_configuration(node, "Reshape dimention number shall be 2 or 4")
