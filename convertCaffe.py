@@ -14,6 +14,7 @@ from onnx2caffe._error_utils import ErrorHandling
 from collections import OrderedDict
 from onnx import shape_inference
 import importlib
+from modelComparator import compareOnnxAndCaffe
 
 transformers = [
     TransposeKiller(),
@@ -109,4 +110,5 @@ if __name__ == "__main__":
     caffemodel_path = sys.argv[3]
     graph = getGraph(onnx_path)
     convertToCaffe(graph, prototxt_path, caffemodel_path)
+    compareOnnxAndCaffe(onnx_path, prototxt_path, caffemodel_path)
 
