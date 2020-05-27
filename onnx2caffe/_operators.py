@@ -338,7 +338,7 @@ def _convert_GlobalAveragepool(node,graph,err):
     node_name = node.name
     input_name = str(node.inputs[0])
     output_name = str(node.outputs[0])
-    iif node.op_type.endswith("MaxPool"):
+    if node.op_type.endswith("MaxPool"):
         pool_type = P.Pooling.MAX
     elif node.op_type.endswith("AveragePool"):
         pool_type = P.Pooling.AVE
