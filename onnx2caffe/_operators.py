@@ -281,6 +281,23 @@ def _convert_pool(node,graph,err):
     graph.channel_dims[output_name] = graph.channel_dims[input_name]
     return layer
 
+def _convert_GlobalAveragepool(node,graph,err): 
+    node_name = node.name
+    input_name = str(node.inputs[0])
+    output_name = str(node.outputs[0])
+    iif node.op_type.endswith("MaxPool"):
+        pool_type = P.Pooling.MAX
+    elif node.op_type.endswith("AveragePool"):
+        pool_type = P.Pooling.AVE
+    else:
+        return err.unsupported_op_configuration(node,  "Unsupported pool type")
+
+    layer = myf("Pooling",node_name,[input_name],[output_name],pooling_param = dict(pool = pool_type),
+                                                                                    global_pooling=True)
+                                                                                   
+    graph.channel_dims[output_name] = graph.channel_dims[input_name]
+    return layer
+
 def _convert_dropout(node,graph,err):
     node_name = node.name
     input_name = str(node.inputs[0])
@@ -548,6 +565,7 @@ _ONNX_NODE_REGISTRY = {
     "Reshape": _convert_Reshape,
     "MaxPool": _convert_pool,
     "AveragePool": _convert_pool,
+    "GlobalAveragePool": _convert_GlobalAveragepool,
     "Dropout": _convert_dropout,
     "Gemm": _convert_gemm,
     "Upsample": _convert_upsample,

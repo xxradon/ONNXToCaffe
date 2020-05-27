@@ -74,6 +74,9 @@ def _convert_Flatten(net, node, graph, err):
 def _convert_pool(net, node, graph, err):
     pass
 
+def _convert_GlobalAveragepool(net, node, graph, err):
+    pass
+
 def _convert_dropout(net, node, graph, err):
     pass
 
@@ -190,6 +193,7 @@ _ONNX_NODE_REGISTRY = {
     "Reshape": _convert_Reshape,
     "MaxPool": _convert_pool,
     "AveragePool": _convert_pool,
+    "GlobalAveragePool": _convert_GlobalAveragepool,
     "Dropout": _convert_dropout,
     "Gemm": _convert_gemm,
     "Upsample": _convert_upsample,
