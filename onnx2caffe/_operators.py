@@ -214,6 +214,59 @@ def _convert_Mul(node,graph,err):
     graph.channel_dims[output_name] = graph.channel_dims[input_name_list[0]]
     return layer
 
+def _convert_Unsqueeze(node,graph,err):
+    node_name = node.name
+    input_name = str(node.inputs[0])
+    output_name = str(node.outputs[0])
+    # if len(node.inputs)==1:
+    #     shape = tuple(node.attrs.get('shape', ()))
+    # else:
+    #     shape = tuple(node.input_tensors[node.inputs[1]])
+    # if shape == ():
+    shape=(1,512)
+
+    if input_name==output_name:
+        inplace = True
+    else:
+        inplace = False
+    if len(shape) == 2:
+        layer = myf("Flatten",node_name,[input_name],[output_name],in_place=inplace)
+        graph.channel_dims[output_name] = shape[1]
+        return layer
+    elif len(shape) == 4:
+        graph.channel_dims[output_name] = shape[1]
+        layer = myf("Reshape", node_name, [input_name], [output_name], reshape_param = dict(shape=dict(dim=list(shape))))
+        return layer
+    else:
+        return err.unsupported_op_configuration(node, "Reshape dimention number shall be 2 or 4")
+
+def _convert_Squeeze(node,graph,err):
+    node_name = node.name
+    input_name = str(node.inputs[0])
+    output_name = str(node.outputs[0])
+    # if len(node.inputs)==1:
+    #     shape = tuple(node.attrs.get('shape', ()))
+    # else:
+    #     shape = tuple(node.input_tensors[node.inputs[1]])
+    # if shape == ():
+    shape=(1,512)
+
+    if input_name==output_name:
+        inplace = True
+    else:
+        inplace = False
+    if len(shape) == 2:
+        layer = myf("Flatten",node_name,[input_name],[output_name],in_place=inplace)
+        graph.channel_dims[output_name] = shape[1]
+        return layer
+    elif len(shape) == 4:
+        graph.channel_dims[output_name] = shape[1]
+        layer = myf("Reshape", node_name, [input_name], [output_name], reshape_param = dict(shape=dict(dim=list(shape))))
+        return layer
+    else:
+        return err.unsupported_op_configuration(node, "Reshape dimention number shall be 2 or 4")
+
+
 def _convert_Reshape(node,graph,err):
     node_name = node.name
     input_name = str(node.inputs[0])
@@ -574,5 +627,7 @@ _ONNX_NODE_REGISTRY = {
     "Sigmoid": _convert_sigmoid,
     "Flatten": _convert_Flatten,
     "Sqrt": _convert_sqrt,
-    "Softmax": _convert_softmax
+    "Softmax": _convert_softmax,
+    "Unsqueeze":_convert_Unsqueeze,
+    "Squeeze":_convert_Squeeze
 }

@@ -65,6 +65,12 @@ def _convert_Add(net, node, graph, err):
 def _convert_Mul(net, node, graph, err):
     pass
 
+def _convert_Unsqueeze(net, node, graph, err):
+    pass
+
+def _convert_Squeeze(net, node, graph, err):
+    pass
+
 def _convert_Reshape(net, node, graph, err):
     pass
 
@@ -202,7 +208,9 @@ _ONNX_NODE_REGISTRY = {
     "Sigmoid": _convert_sigmoid,
     "Flatten": _convert_Flatten,
     "Sqrt": _convert_sqrt,
-    "Softmax": _convert_softmax
+    "Softmax": _convert_softmax,
+    "Unsqueeze":_convert_Unsqueeze,
+    "Squeeze":_convert_Squeeze
 }
 
 
