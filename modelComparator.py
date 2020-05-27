@@ -3,6 +3,12 @@ import onnx
 import onnxruntime
 import numpy as np
 import pdb
+import os
+
+dump_path = 'output/dump'
+
+if not os.path.exists(dump_path):
+    os.makedirs(dump_path)
 
 
 def getOnnxInputs(onnx_graph):
@@ -78,7 +84,7 @@ def net_forward_caffe(caffe_model, in_node, out_node, input_tensor):
 
 
 # check output results
-def check_results(net_results, models):
+def check_results(net_results, onnx_info, caffe_info):
     onnx_results = net_results[0]
     caffe_results = net_results[1]
     for i, result in enumerate(onnx_results):
@@ -94,8 +100,10 @@ def check_results(net_results, models):
         
         if cos_sim < 0.9999:
             # dump result
-            np.save("onnx_out.npy", result)
-            np.save("caffe_out.npy".caffe_results[i])
+            np.savetxt(os.path.join(dump_path, "final_out_onnx.txt"), result.flatten(), fmt='%.18f')
+            np.savetxt(os.path.join(dump_path, "final_out_caffe.txt"), caffe_results[i].flatten(), fmt='%.18f')
+            from layerComparator import compareLayers
+            compareLayers(onnx_info, caffe_info)
             raise Exception("model output different")
 
     print("models similarity test passed")
@@ -116,7 +124,10 @@ def compareOnnxAndCaffe(onnx_path, prototxt_path, caffemodel_path):
     # generate input tensor
     # in NCHW format
     input_tensor = gen_input(models, in_node[0])
+    dump_input_file = os.path.join(dump_path, "input_{}x{}.txt".format(input_tensor.shape[2], input_tensor.shape[3]))
+    np.savetxt(dump_input_file, input_tensor.flatten())
     print("input tensor shape of {}: {}".format(in_node[0], input_tensor.shape))
+    print("dump input to {}".format(dump_input_file))
 
     # feed input tensors for each model and get result
     net_results = run_models(models, in_node[0], out_node, input_tensor)
@@ -125,5 +136,7 @@ def compareOnnxAndCaffe(onnx_path, prototxt_path, caffemodel_path):
                .format(node, net_results[0][i].shape, net_results[1][i].shape))
 
     # check model results
-    check_results(net_results, models)
+    onnx_info = [onnx_path, in_node[0], dump_input_file, input_tensor.shape]
+    caffe_info = [prototxt_path, caffemodel_path, in_node[0], dump_input_file, input_tensor.shape]
+    check_results(net_results, onnx_info, caffe_info)
 
