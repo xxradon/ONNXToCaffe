@@ -21,6 +21,7 @@ transformers = [
     ConstantsToInitializers(),
     ConvAddFuser(),
     MatmulAddFuser(),
+    UnsqueezeFuser(),
 ]
 
 def convertToCaffe(graph, prototxt_save_path, caffe_model_save_path):

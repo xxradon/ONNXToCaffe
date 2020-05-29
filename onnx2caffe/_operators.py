@@ -215,57 +215,10 @@ def _convert_Mul(node,graph,err):
     return layer
 
 def _convert_Unsqueeze(node,graph,err):
-    node_name = node.name
-    input_name = str(node.inputs[0])
-    output_name = str(node.outputs[0])
-    # if len(node.inputs)==1:
-    #     shape = tuple(node.attrs.get('shape', ()))
-    # else:
-    #     shape = tuple(node.input_tensors[node.inputs[1]])
-    # if shape == ():
-    shape=(1,512)
-
-    if input_name==output_name:
-        inplace = True
-    else:
-        inplace = False
-    if len(shape) == 2:
-        layer = myf("Flatten",node_name,[input_name],[output_name],in_place=inplace)
-        graph.channel_dims[output_name] = shape[1]
-        return layer
-    elif len(shape) == 4:
-        graph.channel_dims[output_name] = shape[1]
-        layer = myf("Reshape", node_name, [input_name], [output_name], reshape_param = dict(shape=dict(dim=list(shape))))
-        return layer
-    else:
-        return err.unsupported_op_configuration(node, "Reshape dimention number shall be 2 or 4")
+    return err.unsupported_op_configuration(node, "Unsupport Unsqueeze in caffe")
 
 def _convert_Squeeze(node,graph,err):
-    node_name = node.name
-    input_name = str(node.inputs[0])
-    output_name = str(node.outputs[0])
-    # if len(node.inputs)==1:
-    #     shape = tuple(node.attrs.get('shape', ()))
-    # else:
-    #     shape = tuple(node.input_tensors[node.inputs[1]])
-    # if shape == ():
-    shape=(1,512)
-
-    if input_name==output_name:
-        inplace = True
-    else:
-        inplace = False
-    if len(shape) == 2:
-        layer = myf("Flatten",node_name,[input_name],[output_name],in_place=inplace)
-        graph.channel_dims[output_name] = shape[1]
-        return layer
-    elif len(shape) == 4:
-        graph.channel_dims[output_name] = shape[1]
-        layer = myf("Reshape", node_name, [input_name], [output_name], reshape_param = dict(shape=dict(dim=list(shape))))
-        return layer
-    else:
-        return err.unsupported_op_configuration(node, "Reshape dimention number shall be 2 or 4")
-
+    return err.unsupported_op_configuration(node, "Unsupport Squeeze in caffe")
 
 def _convert_Reshape(node,graph,err):
     node_name = node.name

@@ -367,6 +367,38 @@ class DropoutRemover(NodesFuser):
         parent.outputs = child.outputs
         return [parent]
 
+class UnsqueezeFuser(NodesFuser):
+    '''
+    Removes Unsqueeze + xxx + Squeeze (test)
+    '''
+    def __init__(self):
+        super(UnsqueezeFuser, self).__init__(3)
+
+    def is_eligible(self, graph, nodes):
+        first, mid, last = nodes[0], nodes[1], nodes[2]
+        if len(first.parents) > 1:
+            return False
+        if len(last.children) > 1:
+            return False
+
+        return first.op_type == "Unsqueeze" and last.op_type == "Squeeze"
+    
+    def merge(self, graph, nodes):
+        first, mid, last = nodes[0], nodes[1], nodes[2]
+        last.parents.remove(mid)
+        first.children.remove(mid)
+        final_parents = first.parents
+        final_children = last.children
+        mid.parents.remove(first)
+        mid.children.remove(last)
+        final_parents[0].add_child(mid)
+        final_parents[0].outputs = first.outputs
+        mid.outputs = last.outputs
+        if len(final_children):
+            final_children[0].add_parent(mid)
+
+        return [mid]
+
 
 class ReshapeInitTensorFuser(object):
     '''
