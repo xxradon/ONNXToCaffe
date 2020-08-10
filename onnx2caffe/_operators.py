@@ -496,7 +496,15 @@ def _convert_reduce_mean(node,graph,err):
     axes = node.attrs['axes']
     keep_dim = node.attrs.get("keepdims", 0)
 
-    layer = myf("Reduction", node_name, [input_name], [output_name], axis=len(axes))
+    if len(axes) == 2 and axes[0] == 1 and axes[1] == 2:
+        print("Warning: reduce mean axes may be wrong")
+        layer = myf("Pooling",node_name,[input_name],[output_name],pooling_param = dict(pool = P.Pooling.AVE),
+                                                                                    global_pooling=True)
+    elif len(axes) == 3:
+        layer = myf("Reduction", node_name, [input_name], [output_name], reduction_param = dict(axis=1, operation=P.Reduction.MEAN))
+    else:
+        return err.unsupported_op_configuration(node, "Unsupported reduce mean type")
+
     graph.channel_dims[output_name] = graph.channel_dims[input_name]
     return layer
 
