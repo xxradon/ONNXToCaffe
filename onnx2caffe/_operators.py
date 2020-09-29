@@ -76,7 +76,7 @@ def _convert_conv(node, graph, err):
         slice_h_names = [str(slice_cnt) + "_slice_h0", str(slice_cnt) + "_slice_h1"]
         slice_w_names = [str(slice_cnt) + "_slice_w0", output_name]
 
-        sh_layer = myf("Slice", node_name + "_sh", 
+        sh_layer = myf("Slice", node_name + "_sh",
                     [output_name + "_temp"], slice_h_names, axis = 2, slice_point=[1])
         sw_layer = myf("Slice", node_name + "_sw",
                     [slice_h_names[1]], slice_w_names, axis = 3, slice_point=[1])
@@ -208,7 +208,7 @@ def _convert_Mul(node,graph,err):
 
     if input_name_list[0] == input_name_list[1]:
         layer = myf("Eltwise",node_name,input_name_list,[output_name],operation=P.Eltwise.PROD)
-    else:    
+    else:
         layer = myf("Scale",node_name,input_name_list,[output_name],axis=0,num_axes=2)
 
     graph.channel_dims[output_name] = graph.channel_dims[input_name_list[0]]
@@ -287,7 +287,7 @@ def _convert_pool(node,graph,err):
     graph.channel_dims[output_name] = graph.channel_dims[input_name]
     return layer
 
-def _convert_GlobalAveragepool(node,graph,err): 
+def _convert_GlobalAveragepool(node,graph,err):
     node_name = node.name
     input_name = str(node.inputs[0])
     output_name = str(node.outputs[0])
@@ -300,7 +300,7 @@ def _convert_GlobalAveragepool(node,graph,err):
 
     layer = myf("Pooling",node_name,[input_name],[output_name],pooling_param = dict(pool = pool_type),
                                                                                     global_pooling=True)
-                                                                                   
+
     graph.channel_dims[output_name] = graph.channel_dims[input_name]
     return layer
 
@@ -429,7 +429,7 @@ def _convert_conv_transpose(node,graph,err):
 
     layer = myf('Deconvolution', node_name, [input_name], [output_name],
                 convolution_param=dict(
-                    num_output=W.shape[1],
+                    num_output=W.shape[1] * groups,
                     kernel_h=kernel_shape[0],kernel_w=kernel_shape[1],
                     stride_h=strides[0],stride_w = strides[1],
                     group=groups,
@@ -484,7 +484,7 @@ def _convert_permute(node,graph,err):
         inplace = True
     else:
         inplace = False
-    
+
     layer = myf("Permute", node_name, [input_name], [output_name], in_place=inplace, permute_param=dict(order=list(perm)))
 
     return layer
@@ -522,7 +522,7 @@ def _convert_matmul(node,graph,err):
         bias = node.input_tensors[node.inputs[2]]
         bias_flag = True
 
-    W = np.transpose(W, (1, 0)) 
+    W = np.transpose(W, (1, 0))
     node.input_tensors[weight_name] = W
     layer = myf("InnerProduct", node_name, [input_name], [output_name], num_output=W.shape[0], bias_term=bias_flag)
     graph.channel_dims[output_name] = W.shape[0]
