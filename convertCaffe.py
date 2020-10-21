@@ -1,5 +1,6 @@
 from __future__ import print_function
 import sys
+sys.path.append('/home/shining/work/Optimization/following/tk1/caffe-yolo/python')
 import caffe
 import onnx
 import numpy as np
@@ -106,9 +107,9 @@ def getGraph(onnx_path):
     return graph
 
 if __name__ == "__main__":
-    onnx_path = sys.argv[1]
-    prototxt_path = sys.argv[2]
-    caffemodel_path = sys.argv[3]
+    onnx_path = "/home/shining/Projects/datasets/ducto/yolov5s_416x320_dy_no_nms.onnx"
+    prototxt_path = "board_yolov5s.prototxt"
+    caffemodel_path = "board_yolov5s.caffemodel"
     graph = getGraph(onnx_path)
     convertToCaffe(graph, prototxt_path, caffemodel_path)
     compareOnnxAndCaffe(onnx_path, prototxt_path, caffemodel_path)

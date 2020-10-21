@@ -1,3 +1,5 @@
 .idea
 *.prototxt
 *.caffemodel
+
+*.pyc
