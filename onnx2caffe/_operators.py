@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -11,6 +12,8 @@ from MyCaffe import Function as myf
 # slice cnt, reduce the length of slice layer name str
 slice_cnt = 0
 
+opset_version = 9 # 设置一个全局变量, 此时为默认的 opset_version
+
 def _compare(a, b, encoding="utf8"): #type: (Text, Text, Text) -> bool
     if isinstance(a, bytes):
         a = a.decode(encoding)
@@ -18,13 +21,15 @@ def _compare(a, b, encoding="utf8"): #type: (Text, Text, Text) -> bool
         b = b.decode(encoding)
     return a == b
 
-def make_input(input):
+def make_input(input,version):
     name = input[0]
     output = input[0]
     output = [output]
     shape = input[2]
     shape = list(shape)
     input_layer = myf("Input", name, [], output, input_param=dict(shape=dict(dim=shape)))
+    global opset_version
+    opset_version = version # 设置 opset_vesion
     return input_layer
 
 def _convert_conv(node, graph, err):
@@ -348,44 +353,71 @@ def _convert_gemm(node,graph,err):
 
     return layer
 
+# https://github.com/jnulzl/caffe_plus 里面的upsample 是用的插值
 def _convert_upsample(node,graph,err):
-    factor = int(node.attrs["height_scale"])
+    scales = node.input_tensors.get(node.inputs[1])
+    height_scale = scales[2]
+    width_scale = scales[3]
     node_name = node.name
     input_name = str(node.inputs[0])
     output_name = str(node.outputs[0])
-    # input_shape = graph.shape_dict[input_name]
-    # channels = input_shape[1]
-    channels = graph.channel_dims[input_name]
-    pad = int(math.ceil((factor - 1) / 2.))
+
+
     # layer = myf("Deconvolution", node_name, [input_name], [output_name],
     #             kernel_size=2 * factor - factor % 2,
     #             stride=factor, group=channels,
     #             pad = pad, num_output=channels, bias_term = False)
     mode = node.attrs["mode"]
-    #https://github.com/pytorch/pytorch/issues/6900
-    if mode=="bilinear":
-        layer = myf("Deconvolution", node_name, [input_name], [output_name],
-                    convolution_param=dict(
-                        num_output=channels,
-                        kernel_size=2 * factor - factor % 2,
-                        stride=factor,
-                        pad=pad,
-                        group=channels,
-                        bias_term=False,
-                        weight_filler=dict(type="bilinear_upsampling")
-                    ))
-    else:
-        layer = myf("Deconvolution", node_name, [input_name], [output_name],
-                    convolution_param=dict(
-                        num_output=channels,
-                        kernel_size=factor,
-                        stride=factor,
-                        group=channels,
-                        bias_term=False,
+    if str(mode,encoding="gbk") == "nearest":
+        layer = myf("Upsample", node_name, [input_name], [output_name],
+                    upsample_param=dict(
+                        mode = int(0),
+                        height_scale = int(height_scale),
+                        width_scale = int(width_scale)
                     ))
 
     graph.channel_dims[output_name] = graph.channel_dims[input_name]
     return layer
+
+# def _convert_upsample(node,graph,err):
+#     factor = int(node.attrs["height_scale"])
+#     # factor_list = node.input_tensors.get(node.inputs[1])
+#     node_name = node.name
+#     input_name = str(node.inputs[0])
+#     output_name = str(node.outputs[0])
+#     # input_shape = graph.shape_dict[input_name]
+#     # channels = input_shape[1]
+#     channels = graph.channel_dims[input_name]
+#     pad = int(math.ceil((factor - 1) / 2.))
+#     # layer = myf("Deconvolution", node_name, [input_name], [output_name],
+#     #             kernel_size=2 * factor - factor % 2,
+#     #             stride=factor, group=channels,
+#     #             pad = pad, num_output=channels, bias_term = False)
+#     mode = node.attrs["mode"]
+#     #https://github.com/pytorch/pytorch/issues/6900
+#     if mode=="bilinear":
+#         layer = myf("Deconvolution", node_name, [input_name], [output_name],
+#                     convolution_param=dict(
+#                         num_output=channels,
+#                         kernel_size=2 * factor - factor % 2,
+#                         stride=factor,
+#                         pad=pad,
+#                         group=channels,
+#                         bias_term=False,
+#                         weight_filler=dict(type="bilinear_upsampling")
+#                     ))
+#     else:
+#         layer = myf("Deconvolution", node_name, [input_name], [output_name],
+#                     convolution_param=dict(
+#                         num_output=channels,
+#                         kernel_size=factor,
+#                         stride=factor,
+#                         group=channels,
+#                         bias_term=False,
+#                     ))
+#
+#     graph.channel_dims[output_name] = graph.channel_dims[input_name]
+#     return layer
 
 def _convert_concat(node,graph,err):
     node_name = node.name
@@ -636,5 +668,6 @@ _ONNX_NODE_REGISTRY = {
     "Softmax": _convert_softmax,
     "Unsqueeze":_convert_Unsqueeze,
     "Squeeze":_convert_Squeeze,
-    "Slice": _convert_conv_slice
+    "Slice": _convert_conv_slice,
+    # "Resize": _convert_upsample, # yolovs的resize等同于 upsample
 }

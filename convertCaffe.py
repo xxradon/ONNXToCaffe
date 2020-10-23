@@ -1,6 +1,14 @@
+# -*- coding: utf-8 -*-
 from __future__ import print_function
 import sys
-sys.path.append('/home/shining/work/Optimization/following/tk1/caffe-yolo/python')
+
+import os,sys
+# caffe_root='/opt/caffe/python'
+caffe_root='/home/cc/work/model_framework/caffe_plus/python'
+os.chdir(caffe_root)
+sys.path.insert(0,caffe_root)
+
+
 import caffe
 import onnx
 import numpy as np
@@ -25,7 +33,7 @@ transformers = [
     UnsqueezeFuser(),
 ]
 
-def convertToCaffe(graph, prototxt_save_path, caffe_model_save_path):
+def convertToCaffe(graph,opset_version, prototxt_save_path, caffe_model_save_path):
 
     exist_edges = []
     layers = []
@@ -33,7 +41,7 @@ def convertToCaffe(graph, prototxt_save_path, caffe_model_save_path):
     err = ErrorHandling()
     for i in graph.inputs:
         edge_name = i[0]
-        input_layer = cvt.make_input(i)
+        input_layer = cvt.make_input(i,opset_version)
         layers.append(input_layer)
         exist_edges.append(i[0])
         graph.channel_dims[edge_name] = graph.shape_dict[edge_name][1]
@@ -98,19 +106,22 @@ def convertToCaffe(graph, prototxt_save_path, caffe_model_save_path):
 
 def getGraph(onnx_path):
     model = onnx.load(onnx_path)
+    opset_version = model.opset_import[0].version  # 获取 opset version ,不同的 opset version 下 onnx的 op解析方式不同
     model = shape_inference.infer_shapes(model)
     model_graph = model.graph
     graph = Graph.from_onnx(model_graph)
     graph = graph.transformed(transformers)
     graph.channel_dims = {}
 
-    return graph
+    return graph, opset_version
 
 if __name__ == "__main__":
-    onnx_path = "/home/shining/Projects/datasets/ducto/yolov5s_416x320_dy_no_nms.onnx"
-    prototxt_path = "board_yolov5s.prototxt"
-    caffemodel_path = "board_yolov5s.caffemodel"
+    onnx_path = "/home/cc/work/model_export/Xray/yolov5/xray_yolo/20200731_01/code/onnxruntime_tool/yolov5s_no_nms_no_slice.onnx"
+    # onnx_path = "/home/cc/work/model_export/Xray/yolov5/xray_yolo/20200731_01/code/yolov5s_416x320_dy_no_nms.onnx"
+    prototxt_path = "/home/cc/git_clone/onnx2caffe/optimization_release/onnx2caffe/yolov5s.prototxt"
+    caffemodel_path = "/home/cc/git_clone/onnx2caffe/optimization_release/onnx2caffe/yolov5s.caffemodel"
     graph = getGraph(onnx_path)
-    convertToCaffe(graph, prototxt_path, caffemodel_path)
-    compareOnnxAndCaffe(onnx_path, prototxt_path, caffemodel_path)
+    graph, opset_version = getGraph(onnx_path)
+    convertToCaffe(graph, opset_version, prototxt_path, caffemodel_path)
+    compareOnnxAndCaffe(onnx_path,prototxt_path,caffemodel_path)
 
