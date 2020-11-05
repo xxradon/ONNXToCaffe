@@ -4,10 +4,8 @@ import sys
 
 import os,sys
 # caffe_root='/opt/caffe/python'
-caffe_root='/home/cc/work/model_framework/caffe_plus/python'
-os.chdir(caffe_root)
-sys.path.insert(0,caffe_root)
-
+# os.chdir(caffe_root)
+# sys.path.insert(0,caffe_root)
 
 import caffe
 import onnx
@@ -22,7 +20,7 @@ import onnx2caffe._weightloader as wlr
 from onnx2caffe._error_utils import ErrorHandling
 from collections import OrderedDict
 from onnx import shape_inference
-import importlib
+
 from modelComparator import compareOnnxAndCaffe
 
 transformers = [
@@ -116,10 +114,9 @@ def getGraph(onnx_path):
     return graph, opset_version
 
 if __name__ == "__main__":
-    onnx_path = "/home/cc/work/model_export/Xray/yolov5/xray_yolo/20200731_01/code/onnxruntime_tool/yolov5s_no_nms_no_slice.onnx"
-    # onnx_path = "/home/cc/work/model_export/Xray/yolov5/xray_yolo/20200731_01/code/yolov5s_416x320_dy_no_nms.onnx"
-    prototxt_path = "/home/cc/git_clone/onnx2caffe/optimization_release/onnx2caffe/yolov5s.prototxt"
-    caffemodel_path = "/home/cc/git_clone/onnx2caffe/optimization_release/onnx2caffe/yolov5s.caffemodel"
+    onnx_path = sys.argv[1]
+    prototxt_path = sys.argv[2]
+    caffemodel_path = sys.argv[3]
     graph = getGraph(onnx_path)
     graph, opset_version = getGraph(onnx_path)
     convertToCaffe(graph, opset_version, prototxt_path, caffemodel_path)

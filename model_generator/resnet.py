@@ -128,7 +128,7 @@ def export(dir):
     # model = load_network(model,os.path.join(file_dir,'..','model','pose_v02.pth'))
     model.eval()
     torch.save(model.state_dict(),os.path.join(dir,"resnet.pth"))
-    onnx.export(model, dummy_input,os.path.join(dir,"resnet.onnx"), verbose=True)
+    onnx.export(model, dummy_input,os.path.join(dir,"resnet.onnx"), opset_version=9, verbose=True)
 
 def get_model_and_input(model_save_dir):
     model = ResNet34()

@@ -119,7 +119,7 @@ def export(dir):
     model = MobileNetV2()
     model.eval()
     torch.save(model.state_dict(),os.path.join(dir,"MobileNetV2.pth"))
-    onnx.export(model, dummy_input,os.path.join(dir,"MobileNetV2.onnx"), verbose=True)
+    onnx.export(model, dummy_input,os.path.join(dir,"MobileNetV2.onnx"), opset_version=9, verbose=True)
 
 
 
