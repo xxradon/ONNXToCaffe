@@ -359,22 +359,23 @@ def _convert_gemm(node,graph,err):
 
 
 def _convert_upsample(node,graph,err):
-    factor = int(node.attrs["height_scale"])
     # factor_list = node.input_tensors.get(node.inputs[1])
     node_name = node.name
     input_name = str(node.inputs[0])
     output_name = str(node.outputs[0])
-    # input_shape = graph.shape_dict[input_name]
-    # channels = input_shape[1]
-    channels = graph.channel_dims[input_name]
-    pad = int(math.ceil((factor - 1) / 2.))
-    # layer = myf("Deconvolution", node_name, [input_name], [output_name],
-    #             kernel_size=2 * factor - factor % 2,
-    #             stride=factor, group=channels,
-    #             pad = pad, num_output=channels, bias_term = False)
     mode = node.attrs["mode"]
     #https://github.com/pytorch/pytorch/issues/6900
     if mode=="bilinear":
+        factor = int(node.attrs["height_scale"])
+        # input_shape = graph.shape_dict[input_name]
+        # channels = input_shape[1]
+        channels = graph.channel_dims[input_name]
+        pad = int(math.ceil((factor - 1) / 2.))
+        # layer = myf("Deconvolution", node_name, [input_name], [output_name],
+        #             kernel_size=2 * factor - factor % 2,
+        #             stride=factor, group=channels,
+        #             pad = pad, num_output=channels, bias_term = False)
+
         layer = myf("Deconvolution", node_name, [input_name], [output_name],
                     convolution_param=dict(
                         num_output=channels,
@@ -397,6 +398,11 @@ def _convert_upsample(node,graph,err):
                         width_scale = int(width_scale)
                     ))
     else:
+
+        factor = int(node.attrs["height_scale"])
+        # input_shape = graph.shape_dict[input_name]
+        # channels = input_shape[1]
+        channels = graph.channel_dims[input_name]
         layer = myf("Deconvolution", node_name, [input_name], [output_name],
                     convolution_param=dict(
                         num_output=channels,
