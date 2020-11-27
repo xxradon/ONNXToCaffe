@@ -364,28 +364,39 @@ def _convert_upsample(node,graph,err):
     input_name = str(node.inputs[0])
     output_name = str(node.outputs[0])
     mode = node.attrs["mode"]
+    print(mode)
     #https://github.com/pytorch/pytorch/issues/6900
-    if mode=="bilinear":
-        factor = int(node.attrs["height_scale"])
+    if  str(mode,encoding="gbk") == "linear": #mode=="linear":
+        # factor = int(node.attrs["scales"])
         # input_shape = graph.shape_dict[input_name]
         # channels = input_shape[1]
         channels = graph.channel_dims[input_name]
-        pad = int(math.ceil((factor - 1) / 2.))
+        # pad = int(math.ceil((factor - 1) / 2.))
         # layer = myf("Deconvolution", node_name, [input_name], [output_name],
         #             kernel_size=2 * factor - factor % 2,
         #             stride=factor, group=channels,
         #             pad = pad, num_output=channels, bias_term = False)
-
+        scales = node.input_tensors.get(node.inputs[1])
+        height_scale = int(scales[2])
+        width_scale = int(scales[3])
+        pad_h = int(math.ceil((height_scale - 1) / 2.))
+        pad_w = int(math.ceil((width_scale - 1) / 2.))
         layer = myf("Deconvolution", node_name, [input_name], [output_name],
                     convolution_param=dict(
                         num_output=channels,
-                        kernel_size=2 * factor - factor % 2,
-                        stride=factor,
-                        pad=pad,
+                        # kernel_size=(int(2 * height_scale - height_scale % 2),int(2 * width_scale - width_scale % 2)),
+                        # stride=(height_scale,width_scale),
+                        # pad=(pad_h,pad_w),
+                        kernel_h=int(2 * height_scale - height_scale % 2),
+                        kernel_w=int(2 * width_scale - width_scale % 2),
+                        stride_h=height_scale,
+                        stride_w=height_scale,
+                        pad_h=pad_h,
+                        pad_w=pad_w,
                         group=channels,
                         bias_term=False,
-                        weight_filler=dict(type="bilinear_upsampling")
-                    ))
+                        weight_filler=dict(type="bilinear")
+                    ),param=dict(lr_mult=0,decay_mult=0))
     # https://github.com/jnulzl/caffe_plus 里面的upsample 是用的nearest插值
     elif str(mode,encoding="gbk") == "nearest":
         scales = node.input_tensors.get(node.inputs[1])
@@ -398,16 +409,25 @@ def _convert_upsample(node,graph,err):
                         width_scale = int(width_scale)
                     ))
     else:
-
-        factor = int(node.attrs["height_scale"])
+        scales = node.input_tensors.get(node.inputs[1])
+        height_scale = int(scales[2])
+        width_scale = int(scales[3])
+        # factor = int(node.attrs["scales"])
         # input_shape = graph.shape_dict[input_name]
         # channels = input_shape[1]
         channels = graph.channel_dims[input_name]
+        print(height_scale)
+        print(width_scale)
+
         layer = myf("Deconvolution", node_name, [input_name], [output_name],
                     convolution_param=dict(
                         num_output=channels,
-                        kernel_size=factor,
-                        stride=factor,
+                        # kernel_size=(height_scale,width_scale),
+                        # stride=(height_scale,width_scale),
+                        kernel_h=height_scale,
+                        kernel_w=width_scale,
+                        stride_h=height_scale,
+                        stride_w=height_scale,
                         group=channels,
                         bias_term=False,
                     ))

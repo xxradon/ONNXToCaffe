@@ -153,11 +153,32 @@ def _convert_gemm(net, node, graph, err):
 def _convert_upsample(net, node, graph, err):
     mode = node.attrs["mode"]
     node_name = node.name
-    if mode == "nearest":
+    if  str(mode,encoding="gbk") == "nearest":
         caffe_params = net.params[node_name][0].data
         weights = np.ones(caffe_params.shape).astype("float32")
         np.copyto(net.params[node_name][0].data, weights, casting='same_kind')
         # net.params[node_name][0].data[]
+    elif str(mode,encoding="gbk") == "linear":
+        def bilinear_weight(shape):
+            weight = np.zeros(np.prod(shape), dtype='float32')
+            f = np.ceil(shape[3] / 2.)
+            c = (2 * f - 1 - f % 2) / (2. * f)
+            for i in range(np.prod(shape)):
+                x = i % shape[3]
+                y = (i / shape[3]) % shape[2]
+                weight[i] = (1 - abs(x / f - c)) * (1 - abs(y / f - c))
+            return weight.reshape(shape)
+
+        input_name = str(node.inputs[0])
+
+        channels = graph.channel_dims[input_name]
+        scales = node.input_tensors.get(node.inputs[1])
+        height_scale = int(scales[2])
+        width_scale = int(scales[3])
+        # caffe_params = net.params[node_name][0].data
+        # weights = np.ones(caffe_params.shape).astype("float32")
+        weights = bilinear_weight([channels, 1, int(2 * height_scale - height_scale % 2), int(2 * width_scale - width_scale % 2)])
+        np.copyto(net.params[node_name][0].data, weights, casting='same_kind')
 
 def _convert_concat(net, node, graph, err):
     pass
