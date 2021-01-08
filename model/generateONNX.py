@@ -12,7 +12,8 @@ class model(nn.Module):
 class model_upsample(nn.Module):
     def __init__(self):
         super(model_upsample,self).__init__()
-        self.relu = nn.Upsample(scale_factor=2, mode='bilinear',align_corners=False)
+        # self.relu = nn.Upsample(scale_factor=2, mode='bilinear',align_corners=False)
+        self.relu = nn.Upsample(scale_factor=2, mode='nearest')
 
     def forward(self,x):
         return self.relu(x)

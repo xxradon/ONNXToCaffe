@@ -136,3 +136,5 @@ def get_model_and_input(model_save_dir):
     width = 224
     images = Variable(torch.ones(batch_size, channels, height, width))
     return images,model
+
+export("./")

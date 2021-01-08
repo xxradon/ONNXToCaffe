@@ -4,8 +4,8 @@ import onnxruntime
 import numpy as np
 import pdb
 import os
-
-dump_path = 'output/dump'
+dump_path = os.getcwd()
+dump_path = os.path.join(dump_path,'output/dump')
 
 if not os.path.exists(dump_path):
     os.makedirs(dump_path)

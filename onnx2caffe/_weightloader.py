@@ -154,9 +154,10 @@ def _convert_upsample(net, node, graph, err):
     mode = node.attrs["mode"]
     node_name = node.name
     if  str(mode,encoding="gbk") == "nearest":
-        caffe_params = net.params[node_name][0].data
-        weights = np.ones(caffe_params.shape).astype("float32")
-        np.copyto(net.params[node_name][0].data, weights, casting='same_kind')
+        pass
+        # caffe_params = net.params[node_name][0].data
+        # weights = np.ones(caffe_params.shape).astype("float32")
+        # np.copyto(net.params[node_name][0].data, weights, casting='same_kind')
         # net.params[node_name][0].data[]
     elif str(mode,encoding="gbk") == "linear":
         def bilinear_weight(shape):
